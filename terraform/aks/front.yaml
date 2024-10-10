@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: front-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: front-server
+  template:
+    metadata:
+      labels:
+        app: front-server
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": linux
+      containers:
+      - name: front-server
+        image: 0fficeg2/tree-unity:v5 # 여기에 실제로 배포할 프론트 서버 Docker 이미지의 이름을 넣습니다
+        ports:
+        - containerPort: 80       # 프론트 서버 컨테이너의 노출된 포트
+        env:
+        - name: API_URL
+          value: "http://backend-service:8080"  # 백엔드 서비스 URL을 환경 변수로 전달
+        resources:
+          requests:
+            cpu: 10m
+            memory: 128Mi
+          limits:
+            cpu: 100m
+            memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: front-server
+spec:
+  selector:
+    app: front-server
+  ports:
+    - port: 80
+      targetPort: 80   # 프론트 서버 컨테이너에서 노출한 포트
+  type: LoadBalancer     # 외부에서 접근할 수 있도록 LoadBalancer 설정
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: front-server
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: front-server
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50  # CPU 사용률이 50% 이상일 때 파드 스케일링

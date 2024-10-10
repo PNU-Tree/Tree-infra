@@ -1,0 +1,45 @@
+# postgres-ranking.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-ranking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-ranking
+  template:
+    metadata:
+      labels:
+        app: postgres-ranking
+    spec:
+      containers:
+      - name: postgres-ranking
+        image: 0fficeg2/tree-rank:v1  # 빌드한 Docker 이미지를 푸시한 경로
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          value: "tree"
+        - name: POSTGRES_PASSWORD
+          value: "tree"
+        - name: POSTGRES_DB
+          value: "ranking_db"
+        # 볼륨 마운트 제거
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-ranking-service
+spec:
+  selector:
+    app: postgres-ranking
+  ports:
+    - protocol: TCP
+      port: 5433
+      targetPort: 5432
+  type: ClusterIP
+

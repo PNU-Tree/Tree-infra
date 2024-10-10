@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-server
+spec:
+  replicas: 2  # 기본 파드 수
+  strategy:
+    type: RollingUpdate  # 롤링 업데이트 전략 사용
+    rollingUpdate:
+      maxUnavailable: 1  # 업데이트 중 사용할 수 없는 최대 파드 수
+      maxSurge: 1        # 업데이트 중 생성할 수 있는 최대 추가 파드 수
+  selector:
+    matchLabels:
+      app: backend-server
+  template:
+    metadata:
+      labels:
+        app: backend-server
+    spec:
+      containers:
+      - name: backend-server
+        image: 0fficeg2/tree-backend:v3  # 실제 백엔드 서버 Docker 이미지 경로로 변경
+        ports:
+        - containerPort: 8080  # 백엔드 서버 애플리케이션의 포트
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  selector:
+    app: backend-server
+  ports:
+  - protocol: TCP
+    port: 8080  # 서비스가 노출하는 포트
+    targetPort: 8080  # 컨테이너에서 애플리케이션이 수신하는 포트
+  type: LoadBalancer  # 외부 접근을 허용
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend-server-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend-server  # HPA가 타겟으로 삼을 Deployment 이름
+  minReplicas: 2  # 최소 파드 수
+  maxReplicas: 4  # 최대 파드 수
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50  # CPU 사용률이 50% 이상이면 확장
+
